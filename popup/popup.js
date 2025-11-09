@@ -9,6 +9,33 @@ document.addEventListener("DOMContentLoaded", () => {
     // Find the two elements from your popup.html
     const button = document.getElementById("get-help-button");
     const suggestionBox = document.getElementById("suggestion-box");
+    const apiKeyInput = document.getElementById("api-key-input");
+    const saveKeyButton = document.getElementById("save-key-button");
+    const saveStatus = document.getElementById("save-status");
+
+    // Try to load and display the key if it's already saved
+    // This lets the user know a key is set
+    chrome.storage.sync.get('userApiKey', (data) => {
+        if (data.userApiKey) {
+            apiKeyInput.value = data.userApiKey;
+        }
+    });
+
+    // Listen for a click on the "Save Key" button
+    saveKeyButton.addEventListener("click", () => {
+        const newKey = apiKeyInput.value.trim();
+        if (newKey) {
+            // Save the key to chrome.storage.sync
+            chrome.storage.sync.set({ userApiKey: newKey }, () => {
+                console.log("API Key was saved.");
+                saveStatus.innerText = "API Key saved successfully!";
+                // Clear the status message after 3 seconds
+                setTimeout(() => { saveStatus.innerText = ""; }, 3000);
+            });
+        } else {
+            saveStatus.innerText = "Please enter an API key.";
+        }
+    });
 
     // 1. Listen for a click on the "Get Help" button
     button.addEventListener("click", () => {

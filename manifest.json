@@ -10,7 +10,7 @@
   ],
 
   "host_permissions": [
-    "https://api.gemini.google.com/*",
+    "https://generativelanguage.googleapis.com/*",
     "https://seek.onlinedegree.iitm.ac.in/courses/ns_25t3_cs1002*"
   ],
 
@@ -20,12 +20,5 @@
 
   "background": {
     "service_worker": "background.js"
-  },
-
-  "content_scripts": [
-    {
-      "matches": ["https://seek.onlinedegree.iitm.ac.in/courses/ns_25t3_cs1002*"],
-      "js": ["content_script.js"]
-    }
-  ]
+  }
 }

@@ -44,7 +44,14 @@
     <button id="get-help-button">Get Help / Fix Code</button>
     
     <div id="suggestion-box">Click the button to get a suggestion...</div>
-    
+
+    <hr style="margin: 12px 0;">
+    <div id="api-key-section">
+        <label for="api-key-input" style="font-size: 12px; font-weight: 500;">Gemini API Key:</label>
+        <input type="password" id="api-key-input" style="width: 95%; margin-top: 4px; padding: 6px;">
+        <button id="save-key-button" style="width: 100%; margin-top: 8px; padding: 8px; font-size: 13px; background-color: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer;">Save Key</button>
+        <div id="save-status" style="font-size: 11px; color: green; margin-top: 4px; text-align: center;"></div>
+    </div>
     <script src="popup.js"></script>
 </body>
 </html>

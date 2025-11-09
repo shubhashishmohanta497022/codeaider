@@ -70,13 +70,19 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
  */
 async function callMyAI(scrapedData) {
     const { problemText, currentCode, errorText } = scrapedData;
-    
+
     // --- !!! ACTION REQUIRED !!! ---
-    // 1. Put your real AI API Key here.
-    const API_KEY = "AIzaSyCwpsmS2NZYt2MbAxiAFr6JzxA9ijSc__k"; 
-    
-    // 2. This is the endpoint for Google's Gemini. Change it if you use a different AI.
-    const API_URL = "https://api.gemini.google.com/v1/models/gemini-pro:generateContent?key=" + API_KEY; 
+    // 1. Get the API Key from secure storage
+    const storageData = await chrome.storage.sync.get('userApiKey');
+    const API_KEY = storageData.userApiKey;
+
+    // If the key isn't set, send an error back to the popup
+    if (!API_KEY) {
+        throw new Error("API Key not set. Please add your key in the extension popup and click Save.");
+    }
+
+    // 2. This is the corrected endpoint from our last conversation
+    const API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=" + API_KEY; 
 
     // --- 3. This is the dynamic prompt logic ---
     let prompt;
