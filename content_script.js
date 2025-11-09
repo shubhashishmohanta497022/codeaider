@@ -7,15 +7,15 @@ function scrapeProblemData() {
     // --- Selectors updated based on all your screenshots ---
     
     // 1. The Question Text
-    // (Found in Screenshot 2025-11-10 010252.jpg)
-    const PROBLEM_TEXT_SELECTOR = 'div.programming-question-description';
+    // (UPDATED from image_ebaff8.png)
+    const PROBLEM_TEXT_SELECTOR = '.question-description';
     
     // 2. The Code Editor
-    // (UPDATED from image_e05a72.jpg and image_e05a36.jpg)
+    // (CONFIRMED from image_ebc284.png & image_ebc60b.png)
     const CODE_EDITOR_SELECTOR = 'div.ace_layer.ace_text-layer';
     
     // 3. The Error/Output Box
-    // (Found in image_e04e58.jpg)
+    // (CONFIRMED from image_ebbb61.png)
     const ERROR_BOX_SELECTOR = 'div.test-case-block-content-output';
 
     let problemText = "";
@@ -75,8 +75,14 @@ function scrapeProblemData() {
             error: "Scraper Error: Could not find the problem text. Please make sure the 'Question' tab is visible." 
         };
     }
+     if (!currentCode) {
+        // If we found the problem but no code, let the user know.
+        return { 
+            error: "Scraper Error: Could not find the code editor. Did you click inside the editor? Try again." 
+        };
+    }
 
-    // If we're here, we at least have the problem text.
+    // If we're here, we at least have the problem text and code.
     // Send all three pieces of data back to the background script
     return { problemText, currentCode, errorText };
 }
