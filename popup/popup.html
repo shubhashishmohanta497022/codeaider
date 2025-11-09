@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Code Helper</title>
+    <style>
+        body {
+            width: 350px; /* A bit wider for code */
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            padding: 10px;
+            background-color: #f9f9f9;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            background-color: #007aff;
+            color: white;
+            border: none;
+            border-radius: 6px;
+        }
+        button:disabled {
+            background-color: #c7c7c7;
+        }
+        #suggestion-box {
+            margin-top: 12px;
+            padding: 10px;
+            background-color: #ffffff;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            min-height: 100px;
+            max-height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap; /* This respects newlines in code */
+            font-family: monospace;
+            font-size: 13px;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <button id="get-help-button">Get Help / Fix Code</button>
+    
+    <div id="suggestion-box">Click the button to get a suggestion...</div>
+    
+    <script src="popup.js"></script>
+</body>
+</html>
