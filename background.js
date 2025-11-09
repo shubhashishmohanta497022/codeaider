@@ -46,8 +46,18 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     // The content_script.js has finished and sent us the data.
     if (request.type === "SCRAPED_DATA") {
         console.log("CodeHelper: Received scraped data from content script:", request.data);
+
+        // --- !! NEW FALLBACK CHECK !! ---
+        // Check if the scraper sent back an error instead of data
+        if (request.data.error) {
+            console.error("CodeHelper: Scraper failed:", request.data.error);
+            // Send this specific error to the popup
+            chrome.runtime.sendMessage({ type: "AI_RESPONSE", error: request.data.error });
+            return; // Stop here, do not call the AI
+        }
+        // --- END NEW CHECK ---
         
-        // 3. Now, call the AI with the data
+        // 3. Now, call the AI with the data (only if there was no error)
         callMyAI(request.data)
             .then(aiResponse => {
                 // 4. Send the AI's final answer back to the popup
@@ -56,6 +66,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             })
             .catch(error => {
                 console.error("CodeHelper: Error in AI call:", error);
+                // Send the error (e.g., "API Key not set") to the popup
                 chrome.runtime.sendMessage({ type: "AI_RESPONSE", error: error.message });
             });
         
@@ -70,18 +81,18 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
  */
 async function callMyAI(scrapedData) {
     const { problemText, currentCode, errorText } = scrapedData;
-
+    
     // --- !!! ACTION REQUIRED !!! ---
     // 1. Get the API Key from secure storage
     const storageData = await chrome.storage.sync.get('userApiKey');
     const API_KEY = storageData.userApiKey;
 
-    // If the key isn't set, send an error back to the popup
+    // If the key isn't set, send an error back
     if (!API_KEY) {
         throw new Error("API Key not set. Please add your key in the extension popup and click Save.");
     }
-
-    // 2. This is the corrected endpoint from our last conversation
+    
+    // 2. This is the corrected endpoint for Google's Gemini.
     const API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=" + API_KEY; 
 
     // --- 3. This is the dynamic prompt logic ---
@@ -141,6 +152,10 @@ async function callMyAI(scrapedData) {
         if (!response.ok) {
             const errorBody = await response.text();
             console.error("AI API Error Response:", errorBody);
+            // Handle specific API key error
+            if (response.status === 400) {
+                 throw new Error(`AI API Error: Bad Request. Is your API key correct and enabled?`);
+            }
             throw new Error(`AI API Error: ${response.status} ${response.statusText}`);
         }
 
@@ -152,6 +167,7 @@ async function callMyAI(scrapedData) {
 
     } catch (error) {
         console.error("Error calling AI:", error);
-        return `Error: Could not get a suggestion from the AI. Check the background console and API key. \n\n${error.message}`;
+        // Pass the specific error message (e.g., from the 'throw' statements)
+        return `Error: Could not get a suggestion from the AI. \n\n${error.message}`;
     }
 }

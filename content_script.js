@@ -61,11 +61,27 @@ function scrapeProblemData() {
         console.error("CodeHelper: Error scraping error text:", e);
     }
 
+    // --- !! NEW FALLBACK LOGIC !! ---
+    // Check if the most critical data was found.
+    if (!problemText && !currentCode) {
+        // If we found neither, the scraper definitely failed.
+        return { 
+            error: "Scraper Error: Could not find the problem text or code editor. Are you on the right tab? Reload the page and try again." 
+        };
+    }
+    if (!problemText) {
+        // If we found code but no problem, it's still a failure.
+        return { 
+            error: "Scraper Error: Could not find the problem text. Please make sure the 'Question' tab is visible." 
+        };
+    }
+
+    // If we're here, we at least have the problem text.
     // Send all three pieces of data back to the background script
     return { problemText, currentCode, errorText };
 }
 
-// Send the final scraped data to the background script (background.js)
+// Send the final scraped data OR the error to the background script
 // This message will be heard by the onMessage listener in background.js
 chrome.runtime.sendMessage({ 
     type: "SCRAPED_DATA", 
