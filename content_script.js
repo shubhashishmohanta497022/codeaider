@@ -4,21 +4,19 @@
  */
 
 function scrapeProblemData() {
-    // --- !!! ACTION REQUIRED !!! ---
-    // You MUST replace these 3 placeholder selectors with the real ones
-    // from your IITM course page using the "Inspect" tool.
+    // --- Selectors updated based on all your screenshots ---
     
-    // 1. Find the selector for the question text
-    // (Based on your screenshot, this holds "Seconds to Minute-Seconds", etc.)
-    const PROBLEM_TEXT_SELECTOR = 'div.question-content-container'; // <-- 1. REPLACE THIS
+    // 1. The Question Text
+    // (Found in Screenshot 2025-11-10 010252.jpg)
+    const PROBLEM_TEXT_SELECTOR = 'div.programming-question-description';
     
-    // 2. Find the selector for the code editor's text
-    // (This is often 'div.monaco-editor', or 'div.view-lines')
-    const CODE_EDITOR_SELECTOR = 'div.view-lines'; // <-- 2. REPLACE THIS
+    // 2. The Code Editor
+    // (UPDATED from image_e05a72.jpg and image_e05a36.jpg)
+    const CODE_EDITOR_SELECTOR = 'div.ace_layer.ace_text-layer';
     
-    // 3. Find the selector for the red "Actual Output" error box
-    // (This might be 'div.actual-output', 'pre.error-message', etc.)
-    const ERROR_BOX_SELECTOR = 'div.actual-output-box'; // <-- 3. REPLACE THIS
+    // 3. The Error/Output Box
+    // (Found in image_e04e58.jpg)
+    const ERROR_BOX_SELECTOR = 'div.test-case-block-content-output';
 
     let problemText = "";
     let currentCode = "";
@@ -38,11 +36,12 @@ function scrapeProblemData() {
     
     // --- Scrape 2: The Current Code ---
     try {
+        // This selector points to the div that holds all the text lines.
         const codeEl = document.querySelector(CODE_EDITOR_SELECTOR);
         if (codeEl) {
             currentCode = codeEl.innerText.trim();
         } else {
-            console.warn(`CodeHelper: Selector not found for CODE: "${CODE_EDITOR_SELECTOR}"`);
+            console.warn(`CodeHelper: Selector not found for CODE: "${CODE_EDITOR_SELECTOR}".`);
         }
     } catch (e) {
         console.error("CodeHelper: Error scraping current code:", e);

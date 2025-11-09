@@ -5,13 +5,13 @@
   "description": "Scrapes a problem page and sends it to an AI for a suggestion.",
 
   "permissions": [
-    "activeTab",
     "scripting",
     "storage"
   ],
 
   "host_permissions": [
-    "https://api.gemini.google.com/*"
+    "https://api.gemini.google.com/*",
+    "https://seek.onlinedegree.iitm.ac.in/courses/ns_25t3_cs1002*"
   ],
 
   "action": {
@@ -20,5 +20,12 @@
 
   "background": {
     "service_worker": "background.js"
-  }
+  },
+
+  "content_scripts": [
+    {
+      "matches": ["https://seek.onlinedegree.iitm.ac.in/courses/ns_25t3_cs1002*"],
+      "js": ["content_script.js"]
+    }
+  ]
 }
