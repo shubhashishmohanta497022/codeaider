@@ -73,7 +73,7 @@ async function callMyAI(scrapedData) {
     
     // --- !!! ACTION REQUIRED !!! ---
     // 1. Put your real AI API Key here.
-    const API_KEY = "YOUR_AI_API_KEY_HERE"; 
+    const API_KEY = "AIzaSyCwpsmS2NZYt2MbAxiAFr6JzxA9ijSc__k"; 
     
     // 2. This is the endpoint for Google's Gemini. Change it if you use a different AI.
     const API_URL = "https://api.gemini.google.com/v1/models/gemini-pro:generateContent?key=" + API_KEY; 
