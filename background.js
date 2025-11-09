@@ -93,7 +93,7 @@ async function callMyAI(scrapedData) {
     }
     
     // 2. This is the corrected endpoint for Google's Gemini.
-    const API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=" + API_KEY; 
+    const API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=" + API_KEY; 
 
     // --- 3. This is the dynamic prompt logic ---
     let prompt;
