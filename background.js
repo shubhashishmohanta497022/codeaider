@@ -1,76 +1,80 @@
 /**
  * This is the "Coordinator" script. It runs in the background.
- * 1. Listens for the "Get Help" click from the popup.
- * 2. Runs the scraper (content_script.js) on the page.
- * 3. Listens for the scraped data from the scraper.
- * 4. Sends that data to the AI.
+ * 1. Listens for tab updates (e.g., new question) and injects the scraper.
+ * 2. Listens for the scraped data from the scraper and *stores it*.
+ * 3. Listens for the "Get Help" click from the popup.
+ * 4. Sends the *stored* data to the AI.
  * 5. Sends the AI's final answer back to the popup.
  */
 
-// Listen for messages from popup.js or content_script.js
+let lastScrapedData = null;
+
+// This fires when you click links on the page (even if it doesn't reload)
+chrome.webNavigation.onHistoryStateUpdated.addListener((details) => {
+    if (details.url && details.url.includes("seek.onlinedegree.iitm.ac.in/courses/ns_25t3_cs1002")) {
+        console.log("CodeHelper: Detected navigation. Injecting scraper...");
+        chrome.scripting.executeScript({
+            target: { tabId: details.tabId },
+            files: ["content_script.js"]
+        }, () => {
+            if (chrome.runtime.lastError) {
+                console.error("Script injection failed: ", chrome.runtime.lastError.message);
+            }
+        });
+    }
+});
+
+// We also add one for *full page reloads*
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+    if (changeInfo.status === 'complete' && tab.url && tab.url.includes("seek.onlinedegree.iitm.ac.in/courses/ns_25t3_cs1002")) {
+        console.log("CodeHelper: Detected tab update. Injecting scraper...");
+        chrome.scripting.executeScript({
+            target: { tabId: tabId },
+            files: ["content_script.js"]
+        }, () => {
+            if (chrome.runtime.lastError) {
+                console.error("Script injection failed: ", chrome.runtime.lastError.message);
+            }
+        });
+    }
+});
+
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
     // --- Part 1: Message from the POPUP ---
-    // The user clicked the button in the popup.
     if (request.type === "GET_AI_SUGGESTION") {
-        console.log("CodeHelper: Received request from popup. Injecting scraper...");
+        console.log("CodeHelper: Received request from popup.");
         
-        // 1. Get the current active tab
-        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-            const activeTab = tabs[0];
-            if (!activeTab) {
-                console.error("CodeHelper: No active tab found.");
-                sendResponse({ error: "No active tab found." });
-                return;
-            }
+        if (lastScrapedData) {
+            console.log("CodeHelper: Using pre-fetched data:", lastScrapedData);
 
-            // 2. Run the scraper (content_script.js) on that tab
-            chrome.scripting.executeScript({
-                target: { tabId: activeTab.id },
-                files: ["content_script.js"]
-            }, () => {
-                if (chrome.runtime.lastError) {
-                    console.error("Script injection failed: ", chrome.runtime.lastError.message);
-                    sendResponse({ error: "Failed to inject script. Reload the page and try again." });
-                }
-                // The content_script.js will now run and send a "SCRAPED_DATA" message...
-            });
-        });
+            if (lastScrapedData.error) {
+                console.error("CodeHelper: Scraper failed:", lastScrapedData.error);
+                chrome.runtime.sendMessage({ type: "AI_RESPONSE", error: lastScrapedData.error });
+                return true; 
+            }
         
-        // This is crucial: return true to keep the message channel open
-        // so we can send a response later (asynchronously).
+            callMyAI(lastScrapedData)
+                .then(aiResponse => {
+                    console.log("CodeHelper: Sending AI response to popup.");
+                    chrome.runtime.sendMessage({ type: "AI_RESPONSE", data: aiResponse });
+                })
+                .catch(error => {
+                    console.error("CodeHelper: Error in AI call:", error);
+                    chrome.runtime.sendMessage({ type: "AI_RESPONSE", error: error.message });
+                });
+        } else {
+            console.warn("CodeHelper: No pre-fetched data. The user might need to wait or reload.");
+            sendResponse({ error: "Waiting for scraper... Please wait a few seconds and try again." });
+        }
+        
         return true; 
     }
 
     // --- Part 2: Message from the SCRAPER ---
-    // The content_script.js has finished and sent us the data.
     if (request.type === "SCRAPED_DATA") {
-        console.log("CodeHelper: Received scraped data from content script:", request.data);
-
-        // --- !! NEW FALLBACK CHECK !! ---
-        // Check if the scraper sent back an error instead of data
-        if (request.data.error) {
-            console.error("CodeHelper: Scraper failed:", request.data.error);
-            // Send this specific error to the popup
-            chrome.runtime.sendMessage({ type: "AI_RESPONSE", error: request.data.error });
-            return; // Stop here, do not call the AI
-        }
-        // --- END NEW CHECK ---
-        
-        // 3. Now, call the AI with the data (only if there was no error)
-        callMyAI(request.data)
-            .then(aiResponse => {
-                // 4. Send the AI's final answer back to the popup
-                console.log("CodeHelper: Sending AI response to popup.");
-                chrome.runtime.sendMessage({ type: "AI_RESPONSE", data: aiResponse });
-            })
-            .catch(error => {
-                console.error("CodeHelper: Error in AI call:", error);
-                // Send the error (e.g., "API Key not set") to the popup
-                chrome.runtime.sendMessage({ type: "AI_RESPONSE", error: error.message });
-            });
-        
-        // We don't need to return true here, as this is the end of this message chain.
+        console.log("CodeHelper: Received and *stored* scraped data.");
+        lastScrapedData = request.data;
     }
 });
 
@@ -82,20 +86,15 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 async function callMyAI(scrapedData) {
     const { problemText, currentCode, errorText } = scrapedData;
     
-    // --- !!! ACTION REQUIRED !!! ---
-    // 1. Get the API Key from secure storage
     const storageData = await chrome.storage.sync.get('userApiKey');
     const API_KEY = storageData.userApiKey;
 
-    // If the key isn't set, send an error back
     if (!API_KEY) {
         throw new Error("API Key not set. Please add your key in the extension popup and click Save.");
     }
     
-    // 2. This is the corrected endpoint for Google's Gemini.
     const API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=" + API_KEY; 
 
-    // --- 3. This is the dynamic prompt logic ---
     let prompt;
     if (errorText && errorText.trim() !== "") {
         // SCENARIO 1: There IS an error. Use the "debugger" prompt.
@@ -122,7 +121,7 @@ async function callMyAI(scrapedData) {
     } else {
         // SCENARIO 2: There is NO error. Use the "code helper" prompt.
         prompt = `
-            You are a helpful Python coding assistant.
+            You are an expert Python coding assistant acting as a "pair programmer."
             A user is working on the following problem:
             --- PROBLEM ---
             ${problemText}
@@ -133,18 +132,28 @@ async function callMyAI(scrapedData) {
             ${currentCode}
             --- END CODE ---
 
-            Please provide the next logical block of code, or the full solution if the code is empty, to solve this problem.
-            Only return the code suggestion, with no extra explanation.
+            Your goal is to be a guide, not a solver.
+            Do NOT provide the full solution.
+            
+            Instead, provide only the *very next logical line or small block of code* (1-3 lines maximum) to help the user continue.
+            - If the code is empty, provide the first logical step (like a function definition or an initial variable).
+            - If the code is on the right track, suggest the next line. (e.g., if they just wrote a 'for' loop, suggest the line that should go *inside* the loop).
+            
+            After the code block, add a *single-sentence* explanation (on a new line) of *why* this is the next step.
+
+            For example:
+            \`\`\`python
+            def solve():
+            \`\`\`
+            Start by defining a function to organize your code.
         `;
     }
 
-    // 4. This is the API call to Gemini
     try {
         const response = await fetch(API_URL, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-                // This is the specific format for Gemini's API
                 contents: [{ parts: [{ text: prompt }] }]
             })
         });
@@ -152,7 +161,6 @@ async function callMyAI(scrapedData) {
         if (!response.ok) {
             const errorBody = await response.text();
             console.error("AI API Error Response:", errorBody);
-            // Handle specific API key error
             if (response.status === 400) {
                  throw new Error(`AI API Error: Bad Request. Is your API key correct and enabled?`);
             }
@@ -160,14 +168,11 @@ async function callMyAI(scrapedData) {
         }
 
         const jsonResponse = await response.json();
-        
-        // 5. This parses the AI's response (adjust if your AI's format is different)
         const aiSuggestion = jsonResponse.candidates[0].content.parts[0].text;
         return aiSuggestion;
 
     } catch (error) {
         console.error("Error calling AI:", error);
-        // Pass the specific error message (e.g., from the 'throw' statements)
         return `Error: Could not get a suggestion from the AI. \n\n${error.message}`;
     }
 }
